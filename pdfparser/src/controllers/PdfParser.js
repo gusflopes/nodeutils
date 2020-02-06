@@ -1,19 +1,16 @@
 const fs = require("fs");
 const pdf = require("pdf-parse");
 
-let dataBuffer = fs.readFileSync("./samples/SUCUMBENCIAIS.pdf");
-
 async function pdfRead(file) {
   const data = await pdf(file);
 
-  // console.log(data.text);
-
   const dataJSON = await JSON.stringify(data.text);
 
-  // console.log(dataJSON);
+  /*
   if (data.text.match(/Bloco I/)) {
     console.log("Tem bloco I");
   }
+  */
 
   return dataJSON;
 }
@@ -63,56 +60,59 @@ async function getValor(data) {
   const startString = (await data.regexIndexOf(/valor da dívida: /gim, 1)) + 17;
   const endString = await data.regexIndexOf(/data do cálculo: /gim, -1);
   const valor = await data.substring(startString, endString);
-  console.log("valor", valor);
   return valor;
 }
 
-async function getCalcDate(data) {
+async function getDataCalculo(data) {
   const startString = (await data.regexIndexOf(/data do cálculo: /gim, 1)) + 17;
   const endString = await data.regexIndexOf(/Finalidade: /gim, -1);
   const dataCalculo = await data.substring(startString, endString);
-  console.log("dataCalculo", dataCalculo);
   return dataCalculo;
 }
 
-async function getLawsuitNumber(data) {
+async function getProcesso(data) {
   const startString = (await data.regexIndexOf(/Processo n(.*): /gim, 1)) + 13;
   const endString = await data.regexIndexOf(/Ação: /gim, -1);
   const valor = await data.substring(startString, endString);
-  console.log("valor", valor);
   return valor;
 }
+
+// Reading a static file  for now
+let dataBuffer = fs.readFileSync("./samples/SUCUMBENCIAIS.pdf");
 
 class PdfParser {
   async index(req, res) {
     const data = await pdfRead(dataBuffer);
 
     // Tirar as quebras de linha
-    const response = await data.split("\\n");
+    const linesArray = await data.split("\\n");
 
     // Juntar os arrays usando espaço
-    const newString = await response.join(" ");
+    const dataString = await linesArray.join(" ");
 
     // Limpar espaços duplos
-    const response2 = await newString.replace(/\s{2,}/g, " ");
+    const stringWithoutDoubleSpaces = await dataString.replace(/\s{2,}/g, " ");
 
     // Tirar espaços em branco entre palavras e "."
-    const response3 = await response2.replace(/\s[.]/g, ".");
+    const stringToParse = await stringWithoutDoubleSpaces.replace(
+      /\s[.]/g,
+      "."
+    );
 
     // Filtrar o Credor
-    const credor = await getCredor(response3);
+    const credor = await getCredor(stringToParse);
 
     // Filtrar Devedor
-    const devedor = await getDevedor(response3);
+    const devedor = await getDevedor(stringToParse);
 
     // Filtrar valor
-    const valor = await getValor(response3);
+    const valor = await getValor(stringToParse);
 
     // Filtrar Data do Cálculo
-    const data_calc = await getCalcDate(response3);
+    const data_calc = await getDataCalculo(stringToParse);
 
     // Filtrar processo
-    const processo = await getLawsuitNumber(response3);
+    const processo = await getProcesso(stringToParse);
 
     return res.status(200).json({
       processo,
