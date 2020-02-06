@@ -1,10 +1,10 @@
 import { Router } from "express";
 
-import PdfParser from "./controllers/PdfParser";
+import PdfController from "./controllers/PdfController";
 
 const routes = new Router();
 
 routes.get("/", (req, res) => res.json({ hello: "world" }));
-routes.get("/pdf", PdfParser.index);
+routes.get("/pdf", PdfController.index);
 
 export default routes;
