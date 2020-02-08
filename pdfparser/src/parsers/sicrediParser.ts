@@ -42,17 +42,15 @@ const parameters = [
 
 async function sicrediTransferenciaParser(input: String, fields: Array<Parameters>) {
   let response = [];
-  await fields.map(async f => {
-    const output = f.regexMethod !== true ?
-      await stringParser(f.firstIndex, f.secondIndex, input)
-      :
-      await regexParser(f.secondIndex, input); 
-      console.log(f.field, output);
-      
-      response.push(`${f.field}: ${output}`)
-  })
-  console.log(response);
-  return response;
+  const resultPromises = Promise.all(await fields.map(async f => {
+    if (f.regexMethod) {
+      return await regexParser(f.secondIndex, input);
+    } else {
+      return await stringParser(f.firstIndex, f.secondIndex, input);
+    }
+  })).then(resultPromises => {return resultPromises});
+  console.log('----');
+  return resultPromises;
 }
 
 
@@ -70,7 +68,30 @@ async function generalParser(file) {
   // No case é Sicredi/Comprovante de Transferência
   const pdfParsed = await sicrediTransferenciaParser(pdfCleansed, parameters);
   
-  console.log(pdfParsed);
+  console.log('pdfParsed', pdfParsed);
+  const resultObj = {};
+  let index = 0;
+  for (const obj of parameters) {
+      const objValues = Object.values(obj);
+      resultObj[obj.field] = pdfParsed[index];
+      index++;
+  }
+console.log(resultObj);
+  /*
+  let response = {}
+  
+
+  const newData = [];
+  const result = {}
+    pdfParsed.map((value,index) => {
+      result[parameters[index].field] = value;
+      newData.push(result);
+      console.log('index', index, 'value:', value)
+    })
+
+  console.log('response', response);
+  console.log('newData', newData);
+  */
   return pdfParsed;
 
 }
@@ -117,33 +138,3 @@ generalParser(file);
 - * A transação acima foi realizada via aplicativo Sicredi conforme as condições especificadas neste comprovante. * Os dados digitados são de responsabilidade do usuário. Sicredi Fone 3003 4770 (Capitais e Regiões Metropolitanas) 0800 724 4770 (Demais Regiões) SAC 0800 724 7220 Ouvidoria 0800 646 2519
 
 */
-
-/*
-async function sicrediTransferenciaParser(input: String) {
-  // data: `Hora Transferência: ${data}Data Transferência`
-  console.log('## INPUT ##', input);
-  const data = await regexParser(/\d{2}\/\d{2}\/\d{4}/, input);
-  console.log(data);
-  // valor: `Finalidade: ${valor}Valor a Transferir (R$):`
-  const valor = await stringParser('Finalidade: ', /Valor a Transferir \(R\$\):/gm, input);
-  console.log('valor', valor);
-  
-  // cpfCnpj: `Data Transferência: ${cpfCnpj}CPF/CNPJ`
-  const cpfCnpj = await stringParser('Data Transferência: ', /CPF\/CNPJ/gm, input);
-  console.log('cpfCnpj', cpfCnpj);
-
-  // favorecido: `CPF/CNPJ: ${favorecido}Favorecido:`
-  const favorecido = await stringParser('CPF/CNPJ: ', /Favorecido:/gm, input);
-  console.log(favorecido);
-
-  // observacoes: `Identificador: ${string}Motivo Transferência`
- const observacoes = await stringParser('Identificador: ', /Motivo Transferência/gm, input);
- console.log(observacoes);
-
-  return {data, valor, cpfCnpj, favorecido, observacoes};
-
-  /*
-  return output = {
-    data, valor, cpfCnpj, favorecido, observacoes
-  }
-  */
